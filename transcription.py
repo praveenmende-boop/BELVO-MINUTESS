@@ -1,23 +1,36 @@
 
 from faster_whisper import WhisperModel
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def load_whisper_model():
+
+    print("Loading Whisper Tiny model...")
+
+    model = WhisperModel(
+        "tiny",
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=1,
+        num_workers=1
+    )
+
+    print("Whisper model loaded successfully!")
+
+    return model
 
 
 def transcribe_audio(audio_path):
 
-    print("Loading AI transcription model...")
-
-    # Load a locally running speech recognition model
-    model = WhisperModel(
-        "base",
-        device="cpu",
-        compute_type="int8"
-    )
+    model = load_whisper_model()
 
     print("Transcribing audio...")
 
     segments, info = model.transcribe(
         audio_path,
-        beam_size=5
+        beam_size=1,
+        vad_filter=True
     )
 
     transcript = []
