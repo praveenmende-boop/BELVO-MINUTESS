@@ -8,72 +8,43 @@ def summarize_meeting(text):
     if not text or not text.strip():
         return "No transcript available."
 
-    try:
-        # Divide transcript into sentences
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
 
-        sentences = [
-            sentence.strip()
-            for sentence in sentences
-            if len(sentence.strip().split()) > 3
-        ]
+    if len(sentences) <= 3:
+        return text
 
-        if not sentences:
-            return text[:500]
+    words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
 
-        # Calculate word frequency
-        words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+    stop_words = {
+        "the", "is", "are", "was", "were", "a", "an",
+        "and", "or", "to", "of", "in", "on", "for",
+        "with", "that", "this", "it", "we", "they",
+        "he", "she", "you", "i", "at", "as", "be"
+    }
 
-        stop_words = {
-            "the", "and", "for", "are", "was",
-            "were", "this", "that", "with",
-            "from", "have", "has", "had",
-            "you", "your", "they", "their",
-            "will", "would", "could", "should",
-            "about", "into", "there", "then"
-        }
+    word_freq = Counter(
+        word for word in words if word not in stop_words
+    )
 
-        frequencies = Counter(
-            word for word in words
-            if word not in stop_words
+    scored_sentences = []
+
+    for index, sentence in enumerate(sentences):
+        sentence_words = re.findall(
+            r'\b[a-zA-Z]+\b', sentence.lower()
         )
 
-        # Score each sentence
-        scored_sentences = []
-
-        for index, sentence in enumerate(sentences):
-
-            sentence_words = re.findall(
-                r'\b[a-zA-Z]{3,}\b',
-                sentence.lower()
-            )
-
-            score = sum(
-                frequencies[word]
-                for word in sentence_words
-            )
-
-            scored_sentences.append(
-                (score, index, sentence)
-            )
-
-        # Select important sentences
-        count = min(5, len(scored_sentences))
-
-        important = sorted(
-            scored_sentences,
-            key=lambda item: item[0],
-            reverse=True
-        )[:count]
-
-        # Maintain original sentence order
-        important.sort(key=lambda item: item[1])
-
-        summary = " ".join(
-            item[2] for item in important
+        score = sum(
+            word_freq[word] for word in sentence_words
         )
 
-        return summary
+        scored_sentences.append((score, index, sentence))
 
-    except Exception as e:
-        return f"Summary generation failed: {e}"
+    best_sentences = sorted(
+        scored_sentences,
+        key=lambda x: x[0],
+        reverse=True
+    )[:3]
+
+    best_sentences.sort(key=lambda x: x[1])
+
+    return " ".join(item[2] for item in best_sentences)
