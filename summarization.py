@@ -1,33 +1,79 @@
 
-from transformers import pipeline
+import re
+from collections import Counter
 
-summarizer = None
 
 def summarize_meeting(text):
-    global summarizer
 
-    if not text.strip():
+    if not text or not text.strip():
         return "No transcript available."
 
     try:
-        if summarizer is None:
-            summarizer = pipeline(
-                "summarization",
-                model="sshleifer/distilbart-cnn-12-6",
-                device=-1
-            )
+        # Divide transcript into sentences
+        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
 
-        short_text = text[:800]
+        sentences = [
+            sentence.strip()
+            for sentence in sentences
+            if len(sentence.strip().split()) > 3
+        ]
 
-        result = summarizer(
-            short_text,
-            max_length=80,
-            min_length=15,
-            do_sample=False,
-            truncation=True
+        if not sentences:
+            return text[:500]
+
+        # Calculate word frequency
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+
+        stop_words = {
+            "the", "and", "for", "are", "was",
+            "were", "this", "that", "with",
+            "from", "have", "has", "had",
+            "you", "your", "they", "their",
+            "will", "would", "could", "should",
+            "about", "into", "there", "then"
+        }
+
+        frequencies = Counter(
+            word for word in words
+            if word not in stop_words
         )
 
-        return result[0]["summary_text"]
+        # Score each sentence
+        scored_sentences = []
+
+        for index, sentence in enumerate(sentences):
+
+            sentence_words = re.findall(
+                r'\b[a-zA-Z]{3,}\b',
+                sentence.lower()
+            )
+
+            score = sum(
+                frequencies[word]
+                for word in sentence_words
+            )
+
+            scored_sentences.append(
+                (score, index, sentence)
+            )
+
+        # Select important sentences
+        count = min(5, len(scored_sentences))
+
+        important = sorted(
+            scored_sentences,
+            key=lambda item: item[0],
+            reverse=True
+        )[:count]
+
+        # Maintain original sentence order
+        important.sort(key=lambda item: item[1])
+
+        summary = " ".join(
+            item[2] for item in important
+        )
+
+        return summary
 
     except Exception as e:
         return f"Summary generation failed: {e}"
