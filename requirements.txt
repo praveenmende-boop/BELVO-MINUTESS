@@ -1,6 +1,5 @@
+
 streamlit
 faster-whisper
-transformers==4.57.3
-torch
 reportlab
 imageio-ffmpeg
