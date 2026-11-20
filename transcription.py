@@ -4,11 +4,10 @@ from functools import lru_cache
 
 
 @lru_cache(maxsize=1)
-def load_whisper_model():
+def load_model():
+    print("Loading lightweight Whisper model...")
 
-    print("Loading Whisper Tiny model...")
-
-    model = WhisperModel(
+    return WhisperModel(
         "tiny",
         device="cpu",
         compute_type="int8",
@@ -16,14 +15,10 @@ def load_whisper_model():
         num_workers=1
     )
 
-    print("Whisper model loaded successfully!")
-
-    return model
-
 
 def transcribe_audio(audio_path):
 
-    model = load_whisper_model()
+    model = load_model()
 
     print("Transcribing audio...")
 
@@ -36,7 +31,6 @@ def transcribe_audio(audio_path):
     transcript = []
 
     for segment in segments:
-
         transcript.append({
             "start": round(segment.start, 2),
             "end": round(segment.end, 2),
