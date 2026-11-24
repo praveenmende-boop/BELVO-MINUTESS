@@ -1,14 +1,14 @@
 
-from reportlab.lib.pagesizes import A4  # type: ignore[reportMissingModuleSource]
-from reportlab.platypus import (  # type: ignore[reportMissingModuleSource]
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
     Spacer,
     PageBreak
 )
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # type: ignore[reportMissingModuleSource]
-from reportlab.lib import colors  # type: ignore[reportMissingModuleSource]
-from reportlab.lib.enums import TA_CENTER  # type: ignore[reportMissingModuleSource]
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
 from xml.sax.saxutils import escape
 from datetime import datetime
 import os
@@ -19,7 +19,9 @@ def generate_meeting_pdf(
     transcript,
     summary,
     decisions,
-    action_items
+    action_items,
+    name_mentions=None,
+    tracked_name=""
 ):
     os.makedirs("reports", exist_ok=True)
 
@@ -54,17 +56,18 @@ def generate_meeting_pdf(
         "<b>Meeting:</b> " + escape(str(meeting_name)),
         styles["Normal"]
     ))
+
     story.append(Paragraph(
         "<b>Generated:</b> " + datetime.now().strftime("%d-%m-%Y %H:%M"),
         styles["Normal"]
     ))
+
     story.append(Spacer(1, 20))
 
     sections = [
         ("AI MEETING SUMMARY", summary),
         ("KEY DECISIONS", decisions),
-        ("ACTION ITEMS", action_items),
-        ("FULL TRANSCRIPT", transcript)
+        ("ACTION ITEMS", action_items)
     ]
 
     for heading, content in sections:
@@ -86,12 +89,72 @@ def generate_meeting_pdf(
                 ))
         else:
             safe_text = escape(str(content or "Not available"))
+
             for line in safe_text.splitlines():
                 if line.strip():
                     story.append(Paragraph(line, styles["Normal"]))
                     story.append(Spacer(1, 4))
 
         story.append(Spacer(1, 15))
+
+    # Name Mention Tracker
+    story.append(Paragraph(
+        "NAME MENTION TRACKER",
+        styles["Heading2"]
+    ))
+    story.append(Spacer(1, 8))
+
+    mentions = name_mentions or []
+
+    story.append(Paragraph(
+        "<b>Tracked Name:</b> " + escape(str(tracked_name or "Not specified")),
+        styles["Normal"]
+    ))
+
+    story.append(Paragraph(
+        "<b>Total Mentions:</b> " + str(len(mentions)),
+        styles["Normal"]
+    ))
+
+    story.append(Spacer(1, 8))
+
+    if mentions:
+        for mention in mentions:
+            seconds = int(mention.get("timestamp", 0))
+            timestamp = f"{seconds // 60:02d}:{seconds % 60:02d}"
+
+            story.append(Paragraph(
+                "<b>Timestamp:</b> " + timestamp,
+                styles["Normal"]
+            ))
+
+            story.append(Paragraph(
+                "<b>Context:</b> " + escape(str(mention.get("context", ""))),
+                styles["Normal"]
+            ))
+
+            story.append(Spacer(1, 8))
+    else:
+        story.append(Paragraph(
+            "No mentions detected.",
+            styles["Normal"]
+        ))
+
+    story.append(Spacer(1, 15))
+
+    # Full Transcript
+    story.append(Paragraph(
+        "FULL TRANSCRIPT",
+        styles["Heading2"]
+    ))
+    story.append(Spacer(1, 8))
+
+    safe_text = escape(str(transcript or "Not available"))
+
+    for line in safe_text.splitlines():
+        if line.strip():
+            story.append(Paragraph(line, styles["Normal"]))
+            story.append(Spacer(1, 4))
 
     doc.build(story)
 

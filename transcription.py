@@ -8,10 +8,10 @@ def load_model():
     print("Loading lightweight Whisper model...")
 
     return WhisperModel(
-        "tiny",
+        "base",
         device="cpu",
         compute_type="int8",
-        cpu_threads=1,
+        cpu_threads=2,
         num_workers=1
     )
 
